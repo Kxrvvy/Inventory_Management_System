@@ -12,6 +12,7 @@ class RestockResponse(BaseModel):
     user_id: int
     quantity_added: int
     restock_date: datetime
+    restock_request_id: Optional[int] = None
 
     class Config:
         from_attributes = True

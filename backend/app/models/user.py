@@ -27,6 +27,9 @@ class User(Base):
     
     def is_staff(self):
         return self.role in ["admin", "staff"]
+
+    def is_manufacturer(self):
+        return self.role == "manufacturer"
     
     
     

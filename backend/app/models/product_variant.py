@@ -20,3 +20,4 @@ class ProductVariant(Base):
     product = relationship("Product", back_populates="product_variants")
     restock_history = relationship("RestockHistory", back_populates="product_variant", passive_deletes=True)
     sales_invoices = relationship("SalesInvoice", back_populates="product_variant", passive_deletes=True)
+    restock_requests = relationship("RestockRequest", back_populates="product_variant", passive_deletes=True)

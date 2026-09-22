@@ -6,6 +6,7 @@ import Staff from './Features/Admin/staff';
 import POSDashboard from './Features/POS/POSDashboard';
 import MainLayout from './Features/MainLayout';
 import Reports from './Features/Admin/reports';
+import RestockRequests from './Features/Admin/restock-requests';
 
 // Redirects to login if no token
 function ProtectedRoute({ children }) {
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/staff" element={<AdminRoute><Staff /></AdminRoute>} />
           <Route path="/pos" element={<POSDashboard />} />
           <Route path="/reports" element={<AdminRoute><Reports /></AdminRoute>} />
+          <Route path="/restock-requests" element={<AdminRoute><RestockRequests /></AdminRoute>} />
         </Route>
       </Routes>
     </Router>

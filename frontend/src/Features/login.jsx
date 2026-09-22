@@ -83,9 +83,14 @@ export default function LoginPage() {
         throw new Error(data.detail || 'Authentication failed');
       }
 
+      // Manufacturer accounts sign in through their own separate portal, not here
+      if (data.role === 'manufacturer') {
+        throw new Error('This account signs in through the manufacturer portal.');
+      }
+
       // Store the JWT Access Token securely in browser local storage
       localStorage.setItem('token', data.access_token);
-      
+
       // Store basic contextual meta payload if your UI needs it
       localStorage.setItem('userRole', data.role);
       localStorage.setItem('username', data.username);

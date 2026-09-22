@@ -12,6 +12,8 @@ class RestockHistory(Base):
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     quantity_added = Column(Integer, nullable=False)
     restock_date = Column(DateTime, default=func.now())
-    
+    restock_request_id = Column(Integer, ForeignKey("restock_requests.request_id", ondelete="SET NULL"), nullable=True)
+
     product_variant = relationship("ProductVariant", back_populates="restock_history")
     user = relationship("User", back_populates="restock_history")
+    restock_request = relationship("RestockRequest")

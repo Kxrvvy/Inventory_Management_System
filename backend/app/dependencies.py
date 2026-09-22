@@ -47,18 +47,16 @@ async def get_current_user(
     
     return user
 
-async def require_admin(current_user: User = Depends(get_current_user)):
-    if not current_user.is_admin():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required"
-        )
-    return current_user
+def require_role(*roles: str):
+    async def checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires one of: {', '.join(roles)}"
+            )
+        return current_user
+    return checker
 
-async def require_staff(current_user: User = Depends(get_current_user)):
-    if not current_user.is_staff():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Staff privileges required"
-        )
-    return current_user
+require_admin = require_role("admin")
+require_staff = require_role("admin", "staff")  # admin included, matches previous is_staff() semantics
+require_manufacturer = require_role("manufacturer")
