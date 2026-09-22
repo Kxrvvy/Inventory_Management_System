@@ -21,15 +21,20 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
   const [selectedSizes, setSelectedSizes] = useState([...SIZES]); // all on by default
   const [quantities, setQuantities] = useState({});    // { 'M||Black': 10 }
   const [defaultQty, setDefaultQty] = useState('');
-  const [threshold, setThreshold] = useState('');
+  const [thresholdPercent, setThresholdPercent] = useState('30');
 
   const handleChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   // ── Color tag management ────────────────────────────────────────────────────
+  const handleColorInputChange = (e) => {
+    // Colors are names (e.g., "Black"), not numbers — strip any digits as they're typed.
+    setColorInput(e.target.value.replace(/[0-9]/g, ''));
+  };
+
   const addColor = () => {
     const c = colorInput.trim();
-    if (!c || colors.includes(c)) return;
+    if (!c || /^[0-9]+$/.test(c) || colors.includes(c)) return;
     setColors((prev) => [...prev, c]);
     setColorInput('');
   };
@@ -70,11 +75,13 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
     const variants = [];
     for (const size of selectedSizes) {
       for (const color of colors) {
+        const qty = Number(quantities[key(size, color)]) || 0;
+        const pct = Number(thresholdPercent) || 0;
         variants.push({
           size,
           color,
-          quantity_in_stock: Number(quantities[key(size, color)]) || 0,
-          stock_threshold: Number(threshold) || 0,
+          quantity_in_stock: qty,
+          stock_threshold: Math.round(qty * (pct / 100)),
         });
       }
     }
@@ -152,7 +159,7 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
               <input
                 type="text"
                 value={colorInput}
-                onChange={(e) => setColorInput(e.target.value)}
+                onChange={handleColorInputChange}
                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
                 placeholder="e.g. Black"
                 className={`flex-1 ${inputCls}`}
@@ -164,6 +171,7 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
                 <Plus size={14} /> Add
               </button>
             </div>
+            <p className="text-gray-600 text-xs mt-1.5">Letters only — numeric colors aren't allowed.</p>
 
             {/* Color tags */}
             {colors.length > 0 && (
@@ -266,16 +274,23 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
 
               {/* Global threshold */}
               <div className="flex items-center gap-3 mt-3">
-                <label className="text-gray-400 text-xs whitespace-nowrap">Low-stock threshold (all variants):</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={threshold}
-                  onChange={(e) => setThreshold(e.target.value)}
-                  placeholder="5"
-                  className="w-20 bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 placeholder-gray-600"
-                />
+                <label className="text-gray-400 text-xs whitespace-nowrap">Low-stock threshold (% of each variant's stock):</label>
+                <div className="relative w-20">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={thresholdPercent}
+                    onChange={(e) => setThresholdPercent(e.target.value)}
+                    placeholder="30"
+                    className="w-full bg-gray-800 text-white text-xs rounded-lg pl-2 pr-5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 placeholder-gray-600"
+                  />
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
+                </div>
               </div>
+              <p className="text-gray-600 text-xs mt-1.5 italic">
+                Default low-stock threshold is 30% of each variant's quantity — a variant is flagged low-stock once its stock falls to or below this percentage. Change the value above to use a different percentage.
+              </p>
 
               {/* Preview count */}
               <p className="text-gray-600 text-xs mt-2">

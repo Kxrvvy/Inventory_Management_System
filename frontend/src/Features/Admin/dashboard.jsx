@@ -27,6 +27,10 @@ export default function Dashboard() {
 
   if (loading) return <div className="p-8 font-black text-neutral-600">LOADING DASHBOARD...</div>;
 
+  // The API returns one combined list (quantity <= threshold); split out zero-stock items for their own card.
+  const outOfStockOnly = dashboardData.low_stock_alerts.filter((item) => item.quantity_in_stock === 0);
+  const lowStockOnly = dashboardData.low_stock_alerts.filter((item) => item.quantity_in_stock > 0);
+
   return (
     <div className="p-8">
       <h1 className="text-2xl font-black mb-8">DASHBOARD</h1>
@@ -49,18 +53,34 @@ export default function Dashboard() {
       </div>
 
       {/* Middle Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div className="bg-neutral-100 p-6 rounded-xl border border-neutral-200 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-black text-sm uppercase text-neutral-900">Low stock alerts</h3>
-            <span className="text-[10px] font-black text-red-500">{dashboardData.low_stock_alerts.length} item{dashboardData.low_stock_alerts.length !== 1 ? 's' : ''}</span>
+            <h3 className="font-black text-sm uppercase text-neutral-900">Low Stock</h3>
+            <span className="text-[10px] font-black text-amber-500">{lowStockOnly.length} item{lowStockOnly.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="space-y-3 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-            {dashboardData.low_stock_alerts.length === 0 ? (
-              <p className="text-xs text-neutral-400 font-bold">No low stock alerts.</p>
-            ) : dashboardData.low_stock_alerts.map((item) => (
-              <p key={item.variant_id} className="text-xs font-bold text-red-600 border-l-2 border-red-200 pl-3">
+            {lowStockOnly.length === 0 ? (
+              <p className="text-xs text-neutral-400 font-bold">No low stock items.</p>
+            ) : lowStockOnly.map((item) => (
+              <p key={item.variant_id} className="text-xs font-bold text-amber-600 border-l-2 border-amber-200 pl-3">
                 {item.product_name} <span className="text-neutral-500">({item.size} · {item.color})</span> — {item.quantity_in_stock} LEFT
+              </p>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-neutral-100 p-6 rounded-xl border border-neutral-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-sm uppercase text-neutral-900">Out of Stock</h3>
+            <span className="text-[10px] font-black text-red-500">{outOfStockOnly.length} item{outOfStockOnly.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="space-y-3 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+            {outOfStockOnly.length === 0 ? (
+              <p className="text-xs text-neutral-400 font-bold">No out of stock items.</p>
+            ) : outOfStockOnly.map((item) => (
+              <p key={item.variant_id} className="text-xs font-bold text-red-600 border-l-2 border-red-200 pl-3">
+                {item.product_name} <span className="text-neutral-500">({item.size} · {item.color})</span> — OUT OF STOCK
               </p>
             ))}
           </div>

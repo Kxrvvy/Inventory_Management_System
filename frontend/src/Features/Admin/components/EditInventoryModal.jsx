@@ -5,7 +5,11 @@ import ImageUpload from './ImageUpload';
 const API_BASE = 'http://localhost:8000';
 const CATEGORIES = ['All', 'Jackets', 'Shorts', 'Pants', 'Shirts', 'Tank Tops'];
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const EMPTY_VARIANT = () => ({ size: 'M', color: '', quantity_in_stock: '', stock_threshold: '' });
+const EMPTY_VARIANT = () => ({ size: 'M', color: '', quantity_in_stock: '', threshold_percent: '30' });
+const DEFAULT_THRESHOLD_PERCENT = 30;
+const percentToThreshold = (quantity, percent) => Math.round((Number(quantity) || 0) * ((Number(percent) || 0) / 100));
+const thresholdToPercent = (quantity, threshold) =>
+  quantity > 0 ? Math.round(((Number(threshold) || 0) / quantity) * 100) : DEFAULT_THRESHOLD_PERCENT;
 
 const INPUT_CLS = 'w-full bg-gray-700 text-white text-sm rounded-lg px-2 py-1.5 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500';
 
@@ -74,11 +78,16 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
   // ── Edit variant ──
   const startEdit = (v) => {
     setEditingVariantId(v.variant_id);
-    setVariantEditForm({ size: v.size, color: v.color, stock_threshold: v.stock_threshold });
+    setVariantEditForm({
+      size: v.size,
+      color: v.color,
+      threshold_percent: String(thresholdToPercent(v.quantity_in_stock, v.stock_threshold)),
+    });
   };
 
   const handleSaveVariantEdit = async (variantId) => {
     const token = localStorage.getItem('token');
+    const current = variants.find((v) => v.variant_id === variantId);
     setVariantBusy(true);
     try {
       const res = await fetch(`${API_BASE}/product_variants/${variantId}`, {
@@ -87,7 +96,7 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
         body: JSON.stringify({
           size: variantEditForm.size,
           color: variantEditForm.color,
-          stock_threshold: Number(variantEditForm.stock_threshold) || 0,
+          stock_threshold: percentToThreshold(current?.quantity_in_stock, variantEditForm.threshold_percent),
         }),
       });
       if (!res.ok) throw new Error((await res.json()).detail || 'Update failed');
@@ -128,7 +137,7 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
           size: newVariant.size,
           color: newVariant.color.trim(),
           quantity_in_stock: Number(newVariant.quantity_in_stock) || 0,
-          stock_threshold: Number(newVariant.stock_threshold) || 0,
+          stock_threshold: percentToThreshold(newVariant.quantity_in_stock, newVariant.threshold_percent),
         }),
       });
       if (!res.ok) throw new Error((await res.json()).detail || 'Failed to add variant');
@@ -282,10 +291,14 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-gray-400 text-xs mb-1">Low-stock threshold</label>
-                        <input type="number" min="0" value={variantEditForm.stock_threshold}
-                          onChange={(e) => setVariantEditForm((p) => ({ ...p, stock_threshold: e.target.value }))}
-                          className={INPUT_CLS} placeholder="5" />
+                        <label className="block text-gray-400 text-xs mb-1">Low-stock threshold (% of current stock)</label>
+                        <div className="relative">
+                          <input type="number" min="0" max="100" value={variantEditForm.threshold_percent}
+                            onChange={(e) => setVariantEditForm((p) => ({ ...p, threshold_percent: e.target.value }))}
+                            className={`${INPUT_CLS} pr-6`} placeholder="30" />
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
+                        </div>
+                        <p className="text-gray-600 text-[11px] mt-1 italic">Default is 30% of stock — change the value above to use a different percentage.</p>
                       </div>
                       <button
                         onClick={() => handleSaveVariantEdit(v.variant_id)}
@@ -325,12 +338,16 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                         placeholder="0" className={INPUT_CLS} />
                     </div>
                     <div>
-                      <label className="block text-gray-400 text-xs mb-1">Min threshold</label>
-                      <input type="number" min="0" value={newVariant.stock_threshold}
-                        onChange={(e) => setNewVariant((p) => ({ ...p, stock_threshold: e.target.value }))}
-                        placeholder="5" className={INPUT_CLS} />
+                      <label className="block text-gray-400 text-xs mb-1">Low-stock threshold</label>
+                      <div className="relative">
+                        <input type="number" min="0" max="100" value={newVariant.threshold_percent}
+                          onChange={(e) => setNewVariant((p) => ({ ...p, threshold_percent: e.target.value }))}
+                          placeholder="30" className={`${INPUT_CLS} pr-6`} />
+                        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
+                      </div>
                     </div>
                   </div>
+                  <p className="text-gray-600 text-[11px] italic">Default low-stock threshold is 30% of the variant's quantity. Change the value above to use a different percentage.</p>
                   <div className="flex gap-2">
                     <button onClick={handleAddVariant} disabled={variantBusy}
                       className="flex-1 text-xs bg-gray-200 hover:bg-white text-gray-900 font-bold py-1.5 rounded-lg transition disabled:opacity-50">

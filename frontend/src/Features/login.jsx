@@ -83,11 +83,6 @@ export default function LoginPage() {
         throw new Error(data.detail || 'Authentication failed');
       }
 
-      // This app only has admin screens (no POS), so staff accounts can't use it
-      if (data.role !== 'admin') {
-        throw new Error('Only admin accounts can access the Inventory Management System.');
-      }
-
       // Store the JWT Access Token securely in browser local storage
       localStorage.setItem('token', data.access_token);
       
@@ -95,7 +90,8 @@ export default function LoginPage() {
       localStorage.setItem('userRole', data.role);
       localStorage.setItem('username', data.username);
 
-      navigate('/dashboard');
+      // Redirect based on role: staff goes to POS, admin goes to dashboard
+      navigate(data.role === 'staff' ? '/pos' : '/dashboard');
 
     } catch (err) {
       setApiError(err.message || 'Something went wrong. Please check your connection.');
