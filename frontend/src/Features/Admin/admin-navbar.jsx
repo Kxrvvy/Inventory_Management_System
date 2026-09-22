@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Menu, X, LayoutDashboard, Package, FileText,
-  Users, LogOut,
+  Users, LogOut, ShoppingCart,
 } from 'lucide-react';
 import Logo from '../../assets/logo.png';
 
@@ -12,6 +12,7 @@ export default function AdminNavbar({ isOpen, setIsOpen, userRole = 'Admin', use
   const allMenuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, adminOnly: true },
     { name: 'Inventory',  path: '/inventory',  icon: <Package size={20} />,        adminOnly: true },
+    { name: 'POS',        path: '/pos',         icon: <ShoppingCart size={20} />,   adminOnly: false },
     { name: 'Reports',    path: '/reports',     icon: <FileText size={20} />,       adminOnly: true },
     { name: 'Staff',      path: '/staff',       icon: <Users size={20} />,          adminOnly: true },
   ];

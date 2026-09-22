@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, Package } from 'lucide-react';
 import AdminNavbar from './Admin/admin-navbar';
 import LogoutModal from '../Features/logoutModal';
@@ -9,6 +9,10 @@ export default function MainLayout() {
   const [userData, setUserData] = useState({ name: '', role: '' });
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // POS manages its own top bar — don't duplicate a header above it
+  const isPOS = location.pathname === '/pos';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -55,22 +59,25 @@ export default function MainLayout() {
           isSidebarOpen ? 'md:ml-64' : 'md:ml-20'
         }`}
       >
-        {/* Mobile top bar */}
-        <div className="md:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition"
-          >
-            <Menu size={18} className="text-gray-700" />
-          </button>
-          <div className="flex items-center gap-2">
-            <Package size={15} className="text-slate-600" />
-            <span className="font-black text-sm text-slate-800 tracking-wide">
-              PUPPET'S DIRECTORY
-            </span>
+        {/* Mobile top bar — hidden on POS (POS adds its own hamburger) */}
+        {!isPOS && (
+          <div className="md:hidden sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition"
+            >
+              <Menu size={18} className="text-gray-700" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Package size={15} className="text-slate-600" />
+              <span className="font-black text-sm text-slate-800 tracking-wide">
+                PUPPET'S DIRECTORY
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
+        {/* Pass sidebar opener down so POS can put it in its own top bar */}
         <Outlet context={{ openSidebar: () => setIsSidebarOpen(true) }} />
       </main>
 

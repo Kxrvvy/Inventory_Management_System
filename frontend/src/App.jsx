@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './Features/login';
 import AdminDashboard from './Features/Admin/dashboard';
-import AdminInventory from './Features/Admin/inventory';
+import AdminInventory from './Features/Admin/Inventory';
 import Staff from './Features/Admin/staff';
+import POSDashboard from './Features/POS/POSDashboard';
 import MainLayout from './Features/MainLayout';
 import Reports from './Features/Admin/reports';
 
@@ -13,11 +14,12 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// Redirects non-admins back to login
+// Redirects staff to /pos — admin-only pages only
 function AdminRoute({ children }) {
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('userRole');
-  if (!token || role !== 'admin') return <Navigate to="/" replace />;
+  if (!token) return <Navigate to="/" replace />;
+  if (role !== 'admin') return <Navigate to="/pos" replace />;
   return children;
 }
 
@@ -34,6 +36,7 @@ export default function App() {
           <Route path="/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
           <Route path="/staff" element={<AdminRoute><Staff /></AdminRoute>} />
+          <Route path="/pos" element={<POSDashboard />} />
           <Route path="/reports" element={<AdminRoute><Reports /></AdminRoute>} />
         </Route>
       </Routes>
