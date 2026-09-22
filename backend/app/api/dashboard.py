@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from app.models import Product, ProductVariant, RestockHistory, SalesInvoice, Transaction, User
+from app.models import Product, ProductVariant, RestockHistory, RestockRequest, SalesInvoice, Transaction, User
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from app.api.reports import generate_report
@@ -123,8 +123,28 @@ async def admin_dashboard(
             "quantity_in_stock": variant.quantity_in_stock,
             "stock_threshold": variant.stock_threshold
         })
-        
-        
+    # Incoming Shipments — requests the manufacturer has shipped but the admin hasn't confirmed as received
+    incoming_result = await db.execute(select(RestockRequest)
+                                .options(selectinload(RestockRequest.product_variant).selectinload(ProductVariant.product))
+                                .where(RestockRequest.status == "shipped")
+                                .order_by(RestockRequest.responded_at.desc()))
+
+    incoming_shipments = incoming_result.scalars().all()
+
+    incoming_list = []
+    for req in incoming_shipments:
+        incoming_list.append({
+            "request_id": req.request_id,
+            "variant_id": req.variant_id,
+            "product_name": req.product_variant.product.item_name,
+            "size": req.product_variant.size,
+            "color": req.product_variant.color,
+            "requested_quantity": req.requested_quantity,
+            "response_quantity": req.response_quantity,
+            "responded_at": req.responded_at
+        })
+
+
     return {
         "inventory": {
             "total_products": total_product,
@@ -160,6 +180,10 @@ async def admin_dashboard(
             for tx in recent_transactions
         ],
         "low_stock_alerts": low_stock_list,
+        "incoming_shipments": {
+            "count": len(incoming_list),
+            "items": incoming_list
+        },
         "sales_analytics": {
             "chart": sales_analytics,
             "week_total": round(week_total, 2),

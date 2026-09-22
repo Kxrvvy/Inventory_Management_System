@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, Truck } from 'lucide-react';
 import ImageUpload from './ImageUpload';
+import RequestRestockModal from './RequestRestockModal';
 
 const API_BASE = 'http://localhost:8000';
 const CATEGORIES = ['All', 'Jackets', 'Shorts', 'Pants', 'Shirts', 'Tank Tops'];
@@ -30,6 +31,7 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
   const [restockAmounts, setRestockAmounts] = useState({});
   const [showAddVariant, setShowAddVariant] = useState(false);
   const [newVariant, setNewVariant] = useState(EMPTY_VARIANT());
+  const [requestingVariant, setRequestingVariant] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -236,6 +238,20 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                       <span className="text-gray-500 text-xs">Min: {v.stock_threshold}</span>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
+                      {v.quantity_in_stock <= v.stock_threshold && (
+                        <button
+                          onClick={() => setRequestingVariant({
+                            variant_id: v.variant_id,
+                            product_name: item.item_name,
+                            size: v.size,
+                            color: v.color,
+                            quantity_in_stock: v.quantity_in_stock,
+                          })}
+                          className="flex items-center gap-1 text-xs bg-gray-700 hover:bg-gray-600 text-blue-300 px-2 py-1 rounded-lg transition"
+                        >
+                          <Truck size={12} /> Request Restock
+                        </button>
+                      )}
                       <button
                         onClick={() => editingVariantId === v.variant_id ? setEditingVariantId(null) : startEdit(v)}
                         className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded-lg transition"
@@ -373,6 +389,13 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
           {loading ? <><Loader2 size={16} className="animate-spin" /> Saving...</> : 'Save Product Changes'}
         </button>
       </div>
+
+      {requestingVariant && (
+        <RequestRestockModal
+          variant={requestingVariant}
+          onClose={() => setRequestingVariant(null)}
+        />
+      )}
     </div>
   );
 }

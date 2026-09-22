@@ -1,20 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Truck, CheckCircle2 } from 'lucide-react';
 import SalesChart from './components/SalesChart';
+import RequestRestockModal from './components/RequestRestockModal';
+
+const API_BASE = 'http://localhost:8000';
 
 export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [requestingVariant, setRequestingVariant] = useState(null);
+  const [confirmingId, setConfirmingId] = useState(null);
 
   const getInitials = (name) => {
     if (!name) return "??";
     const parts = name.split(" ").filter(Boolean);
-    return parts.length === 1 
-      ? parts[0][0].toUpperCase() 
+    return parts.length === 1
+      ? parts[0][0].toUpperCase()
       : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  useEffect(() => {
-    fetch('http://localhost:8000/dashboard/admin-dashboard', {
+  const fetchDashboard = useCallback(() => {
+    return fetch(`${API_BASE}/dashboard/admin-dashboard`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
       .then((res) => res.json())
@@ -24,6 +30,25 @@ export default function Dashboard() {
       })
       .catch((err) => console.error("Failed to fetch dashboard:", err));
   }, []);
+
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
+  const handleConfirmReceived = async (requestId) => {
+    setConfirmingId(requestId);
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_BASE}/restock-requests/${requestId}/receive`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Failed to confirm receipt');
+      await fetchDashboard();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   if (loading) return <div className="p-8 font-black text-neutral-600">LOADING DASHBOARD...</div>;
 
@@ -63,9 +88,17 @@ export default function Dashboard() {
             {lowStockOnly.length === 0 ? (
               <p className="text-xs text-neutral-400 font-bold">No low stock items.</p>
             ) : lowStockOnly.map((item) => (
-              <p key={item.variant_id} className="text-xs font-bold text-amber-600 border-l-2 border-amber-200 pl-3">
-                {item.product_name} <span className="text-neutral-500">({item.size} · {item.color})</span> — {item.quantity_in_stock} LEFT
-              </p>
+              <div key={item.variant_id} className="flex items-center justify-between gap-2 border-l-2 border-amber-200 pl-3">
+                <p className="text-xs font-bold text-amber-600">
+                  {item.product_name} <span className="text-neutral-500">({item.size} · {item.color})</span> — {item.quantity_in_stock} LEFT
+                </p>
+                <button
+                  onClick={() => setRequestingVariant(item)}
+                  className="shrink-0 text-[10px] font-black text-neutral-500 hover:text-neutral-900 underline whitespace-nowrap"
+                >
+                  Request Restock
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -79,9 +112,17 @@ export default function Dashboard() {
             {outOfStockOnly.length === 0 ? (
               <p className="text-xs text-neutral-400 font-bold">No out of stock items.</p>
             ) : outOfStockOnly.map((item) => (
-              <p key={item.variant_id} className="text-xs font-bold text-red-600 border-l-2 border-red-200 pl-3">
-                {item.product_name} <span className="text-neutral-500">({item.size} · {item.color})</span> — OUT OF STOCK
-              </p>
+              <div key={item.variant_id} className="flex items-center justify-between gap-2 border-l-2 border-red-200 pl-3">
+                <p className="text-xs font-bold text-red-600">
+                  {item.product_name} <span className="text-neutral-500">({item.size} · {item.color})</span> — OUT OF STOCK
+                </p>
+                <button
+                  onClick={() => setRequestingVariant(item)}
+                  className="shrink-0 text-[10px] font-black text-neutral-500 hover:text-neutral-900 underline whitespace-nowrap"
+                >
+                  Request Restock
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -99,6 +140,38 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Incoming Shipments */}
+      <div className="bg-neutral-100 p-6 rounded-xl border border-neutral-200 shadow-sm mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Truck size={16} className="text-neutral-700" />
+            <h3 className="font-black text-sm uppercase text-neutral-900">Incoming Shipments</h3>
+          </div>
+          <span className="text-[10px] font-black text-blue-500">
+            {dashboardData.incoming_shipments.count} item{dashboardData.incoming_shipments.count !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div className="space-y-2 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+          {dashboardData.incoming_shipments.items.length === 0 ? (
+            <p className="text-xs text-neutral-400 font-bold">No shipments in transit.</p>
+          ) : dashboardData.incoming_shipments.items.map((ship) => (
+            <div key={ship.request_id} className="flex items-center justify-between gap-2 border-l-2 border-blue-200 pl-3">
+              <p className="text-xs font-bold text-blue-700">
+                {ship.product_name} <span className="text-neutral-500">({ship.size} · {ship.color})</span> — {ship.response_quantity} shipped
+              </p>
+              <button
+                onClick={() => handleConfirmReceived(ship.request_id)}
+                disabled={confirmingId === ship.request_id}
+                className="shrink-0 flex items-center gap-1 bg-green-700 hover:bg-green-800 text-white text-[10px] font-black px-2.5 py-1 rounded-lg transition disabled:opacity-50 whitespace-nowrap"
+              >
+                <CheckCircle2 size={12} />
+                {confirmingId === ship.request_id ? 'Saving...' : 'Confirm Received'}
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -190,6 +263,14 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {requestingVariant && (
+        <RequestRestockModal
+          variant={requestingVariant}
+          onClose={() => setRequestingVariant(null)}
+          onRequested={fetchDashboard}
+        />
+      )}
     </div>
   );
 }
