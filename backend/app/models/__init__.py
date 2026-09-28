@@ -5,3 +5,4 @@ from app.models.transaction import Transaction
 from app.models.sales_invoice import SalesInvoice
 from app.models.restock_history import RestockHistory
 from app.models.restock_request import RestockRequest
+from app.models.restock_payment import RestockPayment
