@@ -62,8 +62,18 @@ export default function CartTable({ cart, onUpdateQuantity, onRemove, onClear })
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-xs font-bold truncate leading-snug">{item.item_name}</p>
                   <p className="text-neutral-400 text-xs">{item.size} · {item.color}</p>
-                  <p className="text-neutral-200 text-xs font-bold mt-0.5">
+                  <p className="text-neutral-200 text-xs font-bold mt-0.5 flex items-center flex-wrap gap-x-1.5">
                     ₱{(item.price * item.quantity).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                    {item.discount_percent > 0 && (
+                      <>
+                        <span className="text-neutral-500 font-normal line-through">
+                          ₱{(item.original_price * item.quantity).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] font-black text-red-300 bg-red-900/40 px-1.5 py-0.5 rounded">
+                          -{item.discount_percent}%
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
 

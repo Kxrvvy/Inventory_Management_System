@@ -26,7 +26,10 @@ async def add_product(
         base_price=product_data.base_price,
         category=product_data.category,
         image_url=product_data.image_url,
-        status=product_data.status
+        status=product_data.status,
+        discount_percent=product_data.discount_percent,
+        discount_start=product_data.discount_start,
+        discount_end=product_data.discount_end
     )
     
     db.add(new_product)
@@ -88,6 +91,17 @@ async def update_product(
         product.image_url = product_data.image_url
     if product_data.status is not None:
         product.status = product_data.status
+
+    # Discount fields can be cleared, so an explicit null counts as a value here
+    for field in ("discount_percent", "discount_start", "discount_end"):
+        if field in product_data.model_fields_set:
+            setattr(product, field, getattr(product_data, field))
+
+    if product.discount_start and product.discount_end and product.discount_end < product.discount_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Discount end date cannot be before the start date."
+        )
     
     await db.commit()
     await db.refresh(product)

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 
@@ -9,6 +9,7 @@ class ProductVariantCreate(BaseModel):
     color: str
     stock_threshold: int
     quantity_in_stock: int
+    max_stock: int = Field(default=50, ge=1)
     image_url: Optional[str] = None
     
 class ProductVariantUpdate(BaseModel):
@@ -16,6 +17,7 @@ class ProductVariantUpdate(BaseModel):
     color: Optional[str] = None
     stock_threshold: Optional[int] = None
     quantity_in_stock: Optional[int] = None
+    max_stock: Optional[int] = Field(default=None, ge=1)
     
 class ProductVariantResponse(BaseModel):
     variant_id: int
@@ -24,6 +26,7 @@ class ProductVariantResponse(BaseModel):
     color: str
     stock_threshold: int
     quantity_in_stock: int
+    max_stock: int
     image_url: Optional[str] = None
     status: str
 

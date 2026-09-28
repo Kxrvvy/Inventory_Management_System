@@ -43,6 +43,7 @@ async def add_variant(
         color = variant_data.color,
         stock_threshold = variant_data.stock_threshold,
         quantity_in_stock = variant_data.quantity_in_stock,
+        max_stock = variant_data.max_stock,
         image_url = variant_data.image_url,
     )
     
@@ -118,6 +119,8 @@ async def update_variant(
         variant.stock_threshold = variant_data.stock_threshold
     if variant_data.quantity_in_stock is not None:
         variant.quantity_in_stock = variant_data.quantity_in_stock
+    if variant_data.max_stock is not None:
+        variant.max_stock = variant_data.max_stock
     
     
     await db.commit()

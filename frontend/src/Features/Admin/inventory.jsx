@@ -22,6 +22,26 @@ function getInitials(name) {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
+// FastAPI returns `detail` as a string for HTTP errors but as a list of objects for validation errors.
+function errorMessage(err, fallback) {
+  if (typeof err?.detail === 'string') return err.detail;
+  if (Array.isArray(err?.detail)) {
+    return err.detail.map((e) => (e.msg || '').replace(/^Value error, /, '')).filter(Boolean).join(' ') || fallback;
+  }
+  return fallback;
+}
+
+// Discount is optional: no percent means no discount, so the dates are cleared too.
+function discountPayload(form) {
+  const percent = Number(form.discount_percent);
+  if (!percent || percent <= 0) return { discount_percent: null, discount_start: null, discount_end: null };
+  return {
+    discount_percent: percent,
+    discount_start: form.discount_start || null,
+    discount_end: form.discount_end || null,
+  };
+}
+
 function waitForToken(maxWaitMs = 3000) {
   return new Promise((resolve) => {
     const interval = setInterval(() => {
@@ -97,12 +117,13 @@ export default function AdminInventory() {
           base_price: Number(form.base_price) || 0,
           image_url: (form.image_url || '').trim() || null,
           status: form.status,
+          ...discountPayload(form),
         }),
       });
 
       if (!productRes.ok) {
         const err = await productRes.json();
-        throw new Error(err.detail || 'Failed to create product');
+        throw new Error(errorMessage(err, 'Failed to create product'));
       }
 
       const newProduct = await productRes.json();
@@ -121,6 +142,7 @@ export default function AdminInventory() {
             color,
             quantity_in_stock: Number(v.quantity_in_stock) || 0,
             stock_threshold: Number(v.stock_threshold) || 0,
+            max_stock: Number(v.max_stock) || 50,
           }),
         });
 
@@ -152,12 +174,13 @@ export default function AdminInventory() {
           base_price: Number(form.base_price) || 0,
           image_url: (form.image_url || '').trim() || null,
           status: form.status,
+          ...discountPayload(form),
         }),
       });
 
       if (!response.ok) {
         const err = await response.json();
-        throw new Error(err.detail || 'Failed to update product');
+        throw new Error(errorMessage(err, 'Failed to update product'));
       }
 
       const updated = await response.json();
@@ -272,8 +295,29 @@ export default function AdminInventory() {
                   <div className="flex flex-col">
                     <span className="font-black text-sm text-neutral-900">{item.item_name}</span>
                     <span className="text-neutral-500 text-xs font-bold">
-                      {item.category} · ₱{item.base_price}
+                      {item.category} ·{' '}
+                      {item.discount_active ? (
+                        <>
+                          <span className="text-neutral-900">₱{item.effective_price}</span>{' '}
+                          <span className="line-through font-normal">₱{item.base_price}</span>
+                        </>
+                      ) : (
+                        <>₱{item.base_price}</>
+                      )}
                     </span>
+                    {item.discount_percent > 0 && (
+                      <span
+                        className={`self-start mt-1 text-[10px] font-black px-2 py-0.5 rounded-full ${
+                          item.discount_active ? 'bg-red-100 text-red-600' : 'bg-neutral-200 text-neutral-500'
+                        }`}
+                      >
+                        {item.discount_percent}% OFF
+                        {item.discount_start || item.discount_end
+                          ? ` · ${item.discount_start || '…'}${item.discount_end && item.discount_end !== item.discount_start ? ` → ${item.discount_end}` : ''}`
+                          : ''}
+                        {item.discount_active ? '' : ' (not active today)'}
+                      </span>
+                    )}
                   </div>
                 </div>
 

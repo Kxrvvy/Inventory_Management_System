@@ -69,6 +69,8 @@ export default function VariantPickerModal({ product, onClose, onAdd }) {
     setQuantity(1);
   };
 
+  const unitPrice = product.effective_price ?? product.base_price;
+
   const handleAdd = () => {
     if (!selectedVariant) return;
     onAdd({
@@ -78,7 +80,9 @@ export default function VariantPickerModal({ product, onClose, onAdd }) {
       variant_id: selectedVariant.variant_id,
       size: selectedVariant.size,
       color: selectedVariant.color,
-      price: product.base_price,
+      price: unitPrice,
+      original_price: product.base_price,
+      discount_percent: product.discount_active ? Number(product.discount_percent) : 0,
       quantity,
       image_url: product.image_url || '',
       available_stock: selectedVariant.quantity_in_stock,
@@ -126,7 +130,17 @@ export default function VariantPickerModal({ product, onClose, onAdd }) {
               {product.item_name}
             </p>
             <p className="text-gray-400 text-xs mt-0.5">{product.category}</p>
-            <p className="text-base font-black text-slate-800 mt-0.5">₱{fmt(product.base_price)}</p>
+            <p className="text-base font-black text-slate-800 mt-0.5">
+              ₱{fmt(unitPrice)}
+              {product.discount_active && (
+                <>
+                  <span className="text-xs font-normal text-gray-400 line-through ml-1.5">₱{fmt(product.base_price)}</span>
+                  <span className="text-[10px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded ml-1.5">
+                    -{Number(product.discount_percent)}%
+                  </span>
+                </>
+              )}
+            </p>
           </div>
 
           <button
@@ -292,7 +306,7 @@ export default function VariantPickerModal({ product, onClose, onAdd }) {
             className="w-full bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black py-3.5 rounded-xl transition text-sm"
           >
             {selectedVariant
-              ? `Add ${quantity}× to Cart  —  ₱${fmt(product.base_price * quantity)}`
+              ? `Add ${quantity}× to Cart  —  ₱${fmt(unitPrice * quantity)}`
               : 'Add to Cart'}
           </button>
         </div>

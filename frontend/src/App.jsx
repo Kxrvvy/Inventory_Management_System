@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './Features/login';
 import AdminDashboard from './Features/Admin/dashboard';
-import AdminInventory from './Features/Admin/Inventory';
+import AdminInventory from './Features/Admin/inventory';
 import Staff from './Features/Admin/staff';
 import POSDashboard from './Features/POS/POSDashboard';
 import MainLayout from './Features/MainLayout';

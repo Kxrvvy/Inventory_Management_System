@@ -13,6 +13,8 @@ class ProductVariant(Base):
     color = Column(String(50), nullable=False)
     stock_threshold = Column(Integer, nullable=False)
     quantity_in_stock = Column(Integer, nullable=False)
+    # Highest stock level the admin wants to hold; reorders can't push stock past it
+    max_stock = Column(Integer, nullable=False, default=50, server_default="50")
     image_url = Column(String(500), nullable=True)
     status = Column(String(50), nullable=False, default="active")
     

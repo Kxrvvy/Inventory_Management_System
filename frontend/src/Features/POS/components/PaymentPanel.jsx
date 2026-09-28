@@ -8,6 +8,8 @@ export default function PaymentPanel({ cart, onCheckout, processing }) {
   const [cashReceived, setCashReceived] = useState('');
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const originalTotal = cart.reduce((sum, item) => sum + (item.original_price ?? item.price) * item.quantity, 0);
+  const savings = originalTotal - total;
   const isEPayment = E_PAYMENT_METHODS.includes(paymentMethod);
 
   const cashNum = Number(cashReceived) || 0;
@@ -42,6 +44,18 @@ export default function PaymentPanel({ cart, onCheckout, processing }) {
     <div className="shrink-0 border-t border-neutral-800 bg-neutral-900">
       {/* Total */}
       <div className="px-5 pt-4 pb-3">
+        {savings > 0.005 && (
+          <div className="space-y-1 mb-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-neutral-400">Original price</span>
+              <span className="text-neutral-500 line-through">₱{fmt(originalTotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-red-300 font-semibold">Discount</span>
+              <span className="text-red-300 font-bold">-₱{fmt(savings)}</span>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-white font-bold text-sm">Total</span>
           <span className="text-white font-black text-xl">₱{fmt(total)}</span>

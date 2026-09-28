@@ -43,7 +43,7 @@ async def transaction(
             )
             
         # Calculate Total amount 
-        actual_price = variant.product.base_price
+        actual_price = variant.product.effective_price
         total_amount += actual_price * item.quantity_sold
         validated_items.append((variant, item, actual_price))
         

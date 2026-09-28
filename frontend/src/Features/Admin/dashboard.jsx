@@ -61,11 +61,12 @@ export default function Dashboard() {
       <h1 className="text-2xl font-black mb-8">DASHBOARD</h1>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-6 mb-8">
         {[
           { label: 'Total products', val: dashboardData.inventory.total_products },
           { label: 'Total variants', val: dashboardData.inventory.total_variants },
           { label: 'Low stock', val: dashboardData.inventory.low_stock_count },
+          { label: 'Out of stock', val: dashboardData.inventory.out_of_stock_count },
           { label: 'Total staff', val: dashboardData.staff.total_staff },
           { label: 'Transactions today', val: dashboardData.sales_today.total_transactions },
           { label: "Today's sales", val: `₱${dashboardData.sales_today.total_sales.toLocaleString()}` },

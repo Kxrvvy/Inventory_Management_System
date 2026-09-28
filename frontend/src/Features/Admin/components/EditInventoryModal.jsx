@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, Loader2, Truck } from 'lucide-react';
+import { Plus, X, Loader2 } from 'lucide-react';
 import ImageUpload from './ImageUpload';
-import RequestRestockModal from './RequestRestockModal';
+import DiscountFields from './DiscountFields';
 
 const API_BASE = 'http://localhost:8000';
 const CATEGORIES = ['All', 'Jackets', 'Shorts', 'Pants', 'Shirts', 'Tank Tops'];
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const EMPTY_VARIANT = () => ({ size: 'M', color: '', quantity_in_stock: '', threshold_percent: '30' });
+const DEFAULT_MAX_STOCK = 50;
+const EMPTY_VARIANT = () => ({ size: 'M', color: '', quantity_in_stock: '', threshold_percent: '30', max_stock: String(DEFAULT_MAX_STOCK) });
 const DEFAULT_THRESHOLD_PERCENT = 30;
 const percentToThreshold = (quantity, percent) => Math.round((Number(quantity) || 0) * ((Number(percent) || 0) / 100));
 const thresholdToPercent = (quantity, threshold) =>
@@ -21,6 +22,9 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
     base_price: item.base_price,
     image_url: item.image_url || '',
     status: item.status,
+    discount_percent: item.discount_percent ?? '',
+    discount_start: item.discount_start ?? '',
+    discount_end: item.discount_end ?? '',
   });
 
   const [variants, setVariants] = useState([]);
@@ -31,7 +35,6 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
   const [restockAmounts, setRestockAmounts] = useState({});
   const [showAddVariant, setShowAddVariant] = useState(false);
   const [newVariant, setNewVariant] = useState(EMPTY_VARIANT());
-  const [requestingVariant, setRequestingVariant] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -84,6 +87,7 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
       size: v.size,
       color: v.color,
       threshold_percent: String(thresholdToPercent(v.quantity_in_stock, v.stock_threshold)),
+      max_stock: String(v.max_stock ?? DEFAULT_MAX_STOCK),
     });
   };
 
@@ -99,6 +103,7 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
           size: variantEditForm.size,
           color: variantEditForm.color,
           stock_threshold: percentToThreshold(current?.quantity_in_stock, variantEditForm.threshold_percent),
+          max_stock: Number(variantEditForm.max_stock) || DEFAULT_MAX_STOCK,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).detail || 'Update failed');
@@ -140,6 +145,7 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
           color: newVariant.color.trim(),
           quantity_in_stock: Number(newVariant.quantity_in_stock) || 0,
           stock_threshold: percentToThreshold(newVariant.quantity_in_stock, newVariant.threshold_percent),
+          max_stock: Number(newVariant.max_stock) || DEFAULT_MAX_STOCK,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).detail || 'Failed to add variant');
@@ -200,6 +206,10 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
               <option value="inactive">Inactive</option>
             </select>
           </div>
+          <DiscountFields
+            form={form}
+            onChange={(field, value) => setForm((prev) => ({ ...prev, [field]: value }))}
+          />
         </div>
 
         {/* ── Variants & Stock ── */}
@@ -238,20 +248,6 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                       <span className="text-gray-500 text-xs">Min: {v.stock_threshold}</span>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
-                      {v.quantity_in_stock <= v.stock_threshold && (
-                        <button
-                          onClick={() => setRequestingVariant({
-                            variant_id: v.variant_id,
-                            product_name: item.item_name,
-                            size: v.size,
-                            color: v.color,
-                            quantity_in_stock: v.quantity_in_stock,
-                          })}
-                          className="flex items-center gap-1 text-xs bg-gray-700 hover:bg-gray-600 text-blue-300 px-2 py-1 rounded-lg transition"
-                        >
-                          <Truck size={12} /> Request Restock
-                        </button>
-                      )}
                       <button
                         onClick={() => editingVariantId === v.variant_id ? setEditingVariantId(null) : startEdit(v)}
                         className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded-lg transition"
@@ -268,7 +264,8 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                     </div>
                   </div>
 
-                  {/* Restock row */}
+                  {/* Restock row — only for low-stock / out-of-stock variants */}
+                  {v.quantity_in_stock <= v.stock_threshold && (
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -286,6 +283,7 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                       + Restock
                     </button>
                   </div>
+                  )}
 
                   {/* Inline edit form */}
                   {editingVariantId === v.variant_id && (
@@ -315,6 +313,12 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                           <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">%</span>
                         </div>
                         <p className="text-gray-600 text-[11px] mt-1 italic">Default is 30% of stock — change the value above to use a different percentage.</p>
+                      </div>
+                      <div>
+                        <label className="block text-gray-400 text-xs mb-1">Max stock (reorders can't go past this)</label>
+                        <input type="number" min="1" value={variantEditForm.max_stock}
+                          onChange={(e) => setVariantEditForm((p) => ({ ...p, max_stock: e.target.value }))}
+                          className={INPUT_CLS} placeholder="50" />
                       </div>
                       <button
                         onClick={() => handleSaveVariantEdit(v.variant_id)}
@@ -363,6 +367,12 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
                       </div>
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-gray-400 text-xs mb-1">Max stock (reorders can't go past this)</label>
+                    <input type="number" min="1" value={newVariant.max_stock}
+                      onChange={(e) => setNewVariant((p) => ({ ...p, max_stock: e.target.value }))}
+                      placeholder="50" className={INPUT_CLS} />
+                  </div>
                   <p className="text-gray-600 text-[11px] italic">Default low-stock threshold is 30% of the variant's quantity. Change the value above to use a different percentage.</p>
                   <div className="flex gap-2">
                     <button onClick={handleAddVariant} disabled={variantBusy}
@@ -390,12 +400,6 @@ export default function EditInventoryModal({ item, onClose, onSave, loading }) {
         </button>
       </div>
 
-      {requestingVariant && (
-        <RequestRestockModal
-          variant={requestingVariant}
-          onClose={() => setRequestingVariant(null)}
-        />
-      )}
     </div>
   );
 }
