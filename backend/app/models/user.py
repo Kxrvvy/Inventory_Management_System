@@ -10,6 +10,7 @@ class User(Base):
     user_id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False)
     name = Column(String(100), nullable=True)
+    nickname = Column(String(50), nullable=True)  # Admin-set label for the manufacturer; the only field admin can change on it
     email = Column(String(100), unique=True, nullable=False)
     phone = Column(String(20), nullable=True)       
     dateHired = Column(Date, nullable=True)

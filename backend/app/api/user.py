@@ -5,17 +5,33 @@ from app.database import get_db
 from app.models.user import User
 from app.utils.security import hash_password
 from app.dependencies import require_admin
-from app.schemas import UserCreate, UserUpdate, UserResponse
+from app.schemas import UserCreate, UserUpdate, UserResponse, ManufacturerInfoResponse, ManufacturerNicknameUpdate
 
 router = APIRouter()
 
-@router.post("/", summary="Create User", description="Creates a new user (admin only)")
+# The manufacturer is an external party with its own portal; admins can't create, modify, or delete its account
+# (they can view its contact info via GET /users/manufacturer and set a nickname for it, nothing else).
+NICKNAME_MAX_LENGTH = 50
+MANUFACTURER_ROLE = "manufacturer"
+
+
+def reject_manufacturer_role(role: str | None):
+    if role == MANUFACTURER_ROLE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Manufacturer accounts cannot be managed from the admin side"
+        )
+
+
+@router.post("/", summary="Create User", description="Creates a new staff or admin user (admin only). Manufacturer accounts cannot be created here.")
 async def create_user(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin)
 ) -> UserResponse:
-    
+
+    reject_manufacturer_role(user_data.role)
+
     result = await db.execute(select(User).where(User.username == user_data.username))
     existing_user = result.scalar_one_or_none()
     
@@ -57,11 +73,52 @@ async def get_all_users(
     current_user: User = Depends(require_admin)
 ) -> list[UserResponse]:
     
-    result = await db.execute(select(User))
+    result = await db.execute(select(User).where(User.role != MANUFACTURER_ROLE))
     users = result.scalars().all()
-    
+
     return users
     
+@router.get("/manufacturer", summary="Get Manufacturer Info", description="Admin only. Read-only contact details of the external manufacturer.")
+async def get_manufacturer_info(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+) -> list[ManufacturerInfoResponse]:
+
+    result = await db.execute(select(User).where(User.role == MANUFACTURER_ROLE))
+    return result.scalars().all()
+
+
+@router.patch("/manufacturer/{user_id}/nickname", summary="Set Manufacturer Nickname", description="Admin only. Sets or clears the nickname shown for the manufacturer. This is the only manufacturer field an admin can change.")
+async def set_manufacturer_nickname(
+    user_id: int,
+    nickname_data: ManufacturerNicknameUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+) -> ManufacturerInfoResponse:
+
+    nickname = (nickname_data.nickname or "").strip() or None
+    if nickname and len(nickname) > NICKNAME_MAX_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Nickname must be {NICKNAME_MAX_LENGTH} characters or fewer"
+        )
+
+    result = await db.execute(select(User).where(User.user_id == user_id, User.role == MANUFACTURER_ROLE))
+    manufacturer = result.scalar_one_or_none()
+
+    if not manufacturer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Manufacturer not found"
+        )
+
+    manufacturer.nickname = nickname
+    await db.commit()
+    await db.refresh(manufacturer)
+
+    return manufacturer
+
+
 @router.put("/{user_id}", summary="Update User Role", description="Admin only. Update a user's details and role")
 async def update_staff(
     user_id: int,
@@ -70,15 +127,17 @@ async def update_staff(
     current_user: User = Depends(require_admin)
 ) -> UserResponse:
     
-    result = await db.execute(select(User).where(User.user_id == user_id))
+    reject_manufacturer_role(user_data.role)
+
+    result = await db.execute(select(User).where(User.user_id == user_id, User.role != MANUFACTURER_ROLE))
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-        
+
     if user_data.username is not None:
         user.username = user_data.username
     if user_data.name is not None: 
@@ -108,15 +167,15 @@ async def deactivate_staff(
     current_user: User = Depends(require_admin)
 ):
     
-    result = await db.execute(select(User).where(User.user_id == user_id))
+    result = await db.execute(select(User).where(User.user_id == user_id, User.role != MANUFACTURER_ROLE))
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-        
+
     if user.user_id == current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

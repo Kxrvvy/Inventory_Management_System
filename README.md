@@ -136,7 +136,7 @@ Puppet-s-Directory/
 | Request Restock from Manufacturer | ✅ | ❌ |
 | Confirm Restock Received | ✅ | ❌ |
 
-The **manufacturer** role sits outside this table entirely — it doesn't use the admin/staff app at all. It signs into the separate `manufacturer-portal/` app, where it can only see and respond (ship or decline) to restock requests sent to it.
+The **manufacturer** role sits outside this table entirely — it doesn't use the admin/staff app at all. It signs into the separate `manufacturer-portal/` app, where it can only see and respond (ship or decline) to restock requests sent to it. The manufacturer is an independent entity, not part of the admin's staff: admins can't create, edit, or delete its account (the API rejects it). It appears in its own read-only section at the bottom of the Staff page, and the only thing an admin can change is a **nickname** for it, so it's easy to tell apart. Its account is provisioned by the seed script.
 
 ## 🏭 Manufacturer Restock Workflow
 
