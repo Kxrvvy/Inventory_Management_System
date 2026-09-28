@@ -4,7 +4,15 @@ import { X, Loader2, Send } from 'lucide-react';
 const API_BASE = 'http://localhost:8000';
 
 export default function RequestRestockModal({ variant, onClose, onRequested }) {
-  const [quantity, setQuantity] = useState('');
+  // How many more units fit under the variant's max stock (unknown on screens that don't pass max_stock)
+  const maxOrder = variant.max_stock !== undefined && variant.quantity_in_stock !== undefined
+    ? Math.max(0, variant.max_stock - variant.quantity_in_stock)
+    : undefined;
+  const [quantity, setQuantity] = useState(() => {
+    const suggested = variant.suggested_quantity;
+    if (suggested === undefined) return '';
+    return maxOrder !== undefined ? Math.min(suggested, maxOrder) : suggested;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -12,6 +20,10 @@ export default function RequestRestockModal({ variant, onClose, onRequested }) {
     const qty = Number(quantity);
     if (!qty || qty <= 0) {
       setError('Enter a quantity greater than zero.');
+      return;
+    }
+    if (maxOrder !== undefined && qty > maxOrder) {
+      setError(`You can only reorder up to ${maxOrder} more (max stock is ${variant.max_stock}).`);
       return;
     }
 
@@ -55,20 +67,29 @@ export default function RequestRestockModal({ variant, onClose, onRequested }) {
         <div className="bg-gray-800 rounded-xl p-3 mb-4">
           <p className="text-white text-sm font-bold">{variant.product_name}</p>
           <p className="text-gray-400 text-xs mt-0.5">{variant.size} &middot; {variant.color}</p>
-          <p className="text-gray-500 text-xs mt-1">Currently in stock: {variant.quantity_in_stock}</p>
+          {variant.quantity_in_stock !== undefined && (
+            <p className="text-gray-500 text-xs mt-1">Currently in stock: {variant.quantity_in_stock}</p>
+          )}
+          {maxOrder !== undefined && (
+            <p className="text-gray-500 text-xs mt-1">Max stock: {variant.max_stock} &middot; You can order up to {maxOrder} more</p>
+          )}
+          {variant.suggested_quantity !== undefined && (
+            <p className="text-gray-500 text-xs mt-1">Previously requested: {variant.suggested_quantity}</p>
+          )}
         </div>
 
         <label className="block text-gray-300 text-sm mb-1">Quantity to request</label>
         <input
           type="number"
           min="1"
+          max={maxOrder}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
           placeholder="e.g., 50"
           className={inputCls}
         />
         <p className="text-gray-600 text-xs mt-1.5 italic">
-          This is a suggestion for the manufacturer — they'll confirm how many units they can actually ship.
+          This is a suggestion for the manufacturer — they'll reply with a quote (units they can supply and the price). You pay 50% up front and the rest once it arrives.
         </p>
 
         {error && <p className="text-red-400 text-xs mt-2">{error}</p>}

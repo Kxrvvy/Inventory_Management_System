@@ -15,6 +15,8 @@ const CATEGORIES = ['All', 'Jackets', 'Shorts', 'Pants', 'Shirts', 'Tank Tops'];
 function ReceiptModal({ receipt, cartSnapshot, onClose }) {
   const fmt = (n) => Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2 });
   const date = new Date(receipt.purchased_at);
+  const originalTotal = cartSnapshot.reduce((s, i) => s + (i.original_price ?? i.price) * i.quantity, 0);
+  const savings = originalTotal - cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
@@ -39,12 +41,32 @@ function ReceiptModal({ receipt, cartSnapshot, onClose }) {
                 <p className="font-semibold text-gray-800 truncate">{item.item_name}</p>
                 <p className="text-gray-400 text-xs">{item.size} · {item.color} × {item.quantity}</p>
               </div>
-              <span className="font-bold text-gray-800 shrink-0">₱{fmt(item.price * item.quantity)}</span>
+              <div className="text-right shrink-0">
+                <span className="font-bold text-gray-800">₱{fmt(item.price * item.quantity)}</span>
+                {item.discount_percent > 0 && (
+                  <p className="text-xs text-gray-400">
+                    <span className="line-through">₱{fmt(item.original_price * item.quantity)}</span>
+                    <span className="ml-1 font-black text-red-500">-{item.discount_percent}%</span>
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>
 
         <div className="space-y-1.5 mb-5 text-sm border-t border-gray-100 pt-3">
+          {savings > 0.005 && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Original price</span>
+                <span className="text-gray-400 line-through">₱{fmt(originalTotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-red-500 font-semibold">Discount</span>
+                <span className="font-bold text-red-500">-₱{fmt(savings)}</span>
+              </div>
+            </>
+          )}
           <div className="flex justify-between">
             <span className="text-gray-500">Total</span>
             <span className="font-bold text-gray-900">₱{fmt(receipt.total_amount)}</span>

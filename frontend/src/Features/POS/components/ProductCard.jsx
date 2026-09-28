@@ -19,7 +19,12 @@ export default function ProductCard({ product, onClick }) {
       className="group bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 hover:border-gray-200 transition-all duration-150 active:scale-[0.97] flex flex-col overflow-hidden text-left"
     >
       {/* Image */}
-      <div className="w-full aspect-square overflow-hidden bg-white">
+      <div className="relative w-full aspect-square overflow-hidden bg-white">
+        {product.discount_active && (
+          <span className="absolute top-2 left-2 z-10 bg-red-600 text-white text-xs font-black px-2 py-1 rounded-md shadow">
+            {Number(product.discount_percent)}% OFF
+          </span>
+        )}
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -44,9 +49,21 @@ export default function ProductCard({ product, onClick }) {
           {product.item_name}
         </span>
         <span className="text-xs text-gray-400">{product.category}</span>
-        <span className="text-sm font-black text-slate-800 mt-1">
-          ₱{Number(product.base_price).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-        </span>
+        <div className="flex items-baseline flex-wrap gap-x-1.5 mt-1">
+          <span className="text-sm font-black text-slate-800">
+            ₱{Number(product.effective_price ?? product.base_price).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+          </span>
+          {product.discount_active && (
+            <>
+              <span className="text-xs text-gray-400 line-through">
+                ₱{Number(product.base_price).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+              </span>
+              <span className="text-[10px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                -{Number(product.discount_percent)}%
+              </span>
+            </>
+          )}
+        </div>
       </div>
     </button>
   );

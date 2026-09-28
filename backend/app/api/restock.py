@@ -26,6 +26,13 @@ async def restock_product(
             detail="Variant not found"
         )
         
+    # Only low-stock / out-of-stock variants can be restocked
+    if variant.quantity_in_stock > variant.stock_threshold:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This variant is not low on stock, so it can't be restocked yet"
+        )
+
     # check the validity of stock amount
     if restock_data.quantity_added <= 0:
         raise HTTPException(

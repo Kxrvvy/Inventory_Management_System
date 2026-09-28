@@ -25,7 +25,7 @@ export default function Navbar() {
       <div className="flex items-center gap-6">
         <span className="text-white font-black uppercase tracking-wide text-sm">Manufacturer Portal</span>
         <button onClick={() => navigate('/requests')} className={linkCls('/requests')}>
-          <Clock size={15} /> Pending
+          <Clock size={15} /> To Do
         </button>
         <button onClick={() => navigate('/history')} className={linkCls('/history')}>
           <HistoryIcon size={15} /> History

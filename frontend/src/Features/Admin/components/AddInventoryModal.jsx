@@ -1,9 +1,24 @@
 import { useState } from 'react';
 import { Plus, X, Loader2 } from 'lucide-react';
 import ImageUpload from './ImageUpload';
+import DiscountFields from './DiscountFields';
 
 const CATEGORIES = ['All', 'Jackets', 'Shorts', 'Pants', 'Shirts', 'Tank Tops'];
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const DEFAULT_COLORS = [
+  { name: 'Black', hex: '#111827' },
+  { name: 'White', hex: '#f9fafb' },
+  { name: 'Gray', hex: '#6b7280' },
+  { name: 'Navy', hex: '#1e3a8a' },
+  { name: 'Blue', hex: '#3b82f6' },
+  { name: 'Red', hex: '#ef4444' },
+  { name: 'Green', hex: '#22c55e' },
+  { name: 'Yellow', hex: '#facc15' },
+  { name: 'Brown', hex: '#92400e' },
+  { name: 'Beige', hex: '#d6c3a3' },
+  { name: 'Pink', hex: '#ec4899' },
+  { name: 'Purple', hex: '#8b5cf6' },
+];
 
 export default function AddInventoryModal({ onClose, onSave, loading }) {
   // ── Product fields ──────────────────────────────────────────────────────────
@@ -13,6 +28,9 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
     base_price: '',
     image_url: '',
     status: 'active',
+    discount_percent: '',
+    discount_start: '',
+    discount_end: '',
   });
 
   // ── Variant matrix state ────────────────────────────────────────────────────
@@ -22,6 +40,7 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
   const [quantities, setQuantities] = useState({});    // { 'M||Black': 10 }
   const [defaultQty, setDefaultQty] = useState('');
   const [thresholdPercent, setThresholdPercent] = useState('30');
+  const [maxStock, setMaxStock] = useState('50');
 
   const handleChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -37,6 +56,11 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
     if (!c || /^[0-9]+$/.test(c) || colors.includes(c)) return;
     setColors((prev) => [...prev, c]);
     setColorInput('');
+  };
+
+  const togglePresetColor = (name) => {
+    if (colors.includes(name)) removeColor(name);
+    else setColors((prev) => [...prev, name]);
   };
 
   const removeColor = (color) => {
@@ -82,6 +106,7 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
           color,
           quantity_in_stock: qty,
           stock_threshold: Math.round(qty * (pct / 100)),
+          max_stock: Number(maxStock) || 50,
         });
       }
     }
@@ -144,6 +169,10 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
               </select>
             </div>
           </div>
+          <DiscountFields
+            form={form}
+            onChange={(field, value) => setForm((prev) => ({ ...prev, [field]: value }))}
+          />
         </div>
 
         {/* ── Variants matrix ── */}
@@ -155,6 +184,26 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
             <label className="block text-gray-400 text-xs font-bold uppercase tracking-wide mb-2">
               1 · Add Colors
             </label>
+            {/* Default color buttons */}
+            <div className="flex flex-wrap justify-center gap-2 mb-3">
+              {DEFAULT_COLORS.map(({ name, hex }) => {
+                const on = colors.includes(name);
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => togglePresetColor(name)}
+                    aria-pressed={on}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${
+                      on ? 'bg-gray-200 text-gray-900' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full border border-gray-500" style={{ backgroundColor: hex }} />
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -171,7 +220,7 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
                 <Plus size={14} /> Add
               </button>
             </div>
-            <p className="text-gray-600 text-xs mt-1.5">Letters only — numeric colors aren't allowed.</p>
+            <p className="text-gray-600 text-xs mt-1.5">Click a color above to add or remove it, or type a custom one. Letters only — numeric colors aren't allowed.</p>
 
             {/* Color tags */}
             {colors.length > 0 && (
@@ -291,6 +340,19 @@ export default function AddInventoryModal({ onClose, onSave, loading }) {
               <p className="text-gray-600 text-xs mt-1.5 italic">
                 Default low-stock threshold is 30% of each variant's quantity — a variant is flagged low-stock once its stock falls to or below this percentage. Change the value above to use a different percentage.
               </p>
+
+              {/* Max stock */}
+              <div className="flex items-center gap-3 mt-3">
+                <label className="text-gray-400 text-xs whitespace-nowrap">Max stock per variant (reorders can't go past this):</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={maxStock}
+                  onChange={(e) => setMaxStock(e.target.value)}
+                  placeholder="50"
+                  className="w-20 bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 placeholder-gray-600"
+                />
+              </div>
 
               {/* Preview count */}
               <p className="text-gray-600 text-xs mt-2">

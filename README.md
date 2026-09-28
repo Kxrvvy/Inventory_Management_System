@@ -121,7 +121,8 @@ Puppet-s-Directory/
 | `transactions` | One row per sale, tied to the staff member who processed it |
 | `sales_invoices` | Line items for each transaction |
 | `restock_history` | Log of every stock replenishment (links back to the request that caused it, if any) |
-| `restock_requests` | Lifecycle of a manufacturer restock request: `pending` → `declined` / `shipped` → `received` |
+| `restock_requests` | Lifecycle of a manufacturer restock request: `pending` → `quoted` → `awaiting_deposit` → `deposit_submitted` → `deposit_paid` → `shipped` → `awaiting_balance` → `balance_submitted` → `completed` (side exits: `declined`, `cancelled`) |
+| `restock_payments` | The deposit and balance payment of a restock request: amount, method, reference number, who paid, who confirmed |
 
 ## 🔐 Role-Based Access
 
@@ -136,14 +137,19 @@ Puppet-s-Directory/
 | Request Restock from Manufacturer | ✅ | ❌ |
 | Confirm Restock Received | ✅ | ❌ |
 
-The **manufacturer** role sits outside this table entirely — it doesn't use the admin/staff app at all. It signs into the separate `manufacturer-portal/` app, where it can only see and respond (ship or decline) to restock requests sent to it. The manufacturer is an independent entity, not part of the admin's staff: admins can't create, edit, or delete its account (the API rejects it). It appears in its own read-only section at the bottom of the Staff page, and the only thing an admin can change is a **nickname** for it, so it's easy to tell apart. Its account is provisioned by the seed script.
+The **manufacturer** role sits outside this table entirely — it doesn't use the admin/staff app at all. It signs into the separate `manufacturer-portal/` app, where it can only see and respond (quote or decline, then confirm payments and ship) to restock requests sent to it. The manufacturer is an independent entity, not part of the admin's staff: admins can't create, edit, or delete its account (the API rejects it). It appears in its own read-only section at the bottom of the Staff page, and the only thing an admin can change is a **nickname** for it, so it's easy to tell apart. Its account is provisioned by the seed script.
 
 ## 🏭 Manufacturer Restock Workflow
 
 1. **Admin** sees a low-stock or out-of-stock variant (dashboard cards or the inventory edit modal) and clicks **Request Restock**, suggesting a quantity.
-2. **Manufacturer** logs into the manufacturer portal, sees the request under *Pending*, and either **ships** (entering however many units they can actually supply — it doesn't have to match the request) or **declines** with a reason.
-3. Once shipped, the admin dashboard shows it under **Incoming Shipments**, and the full status/history is always visible on the **Restock Requests** page.
-4. When the shipment physically arrives, the admin clicks **Confirm Received** — stock updates automatically and the restock is logged in `restock_history`, linked back to the original request.
+2. **Manufacturer** logs into the manufacturer portal, sees the request under *To Do*, and either **sends a quote** (the units they can actually supply — it doesn't have to match the request — plus a price per unit and payment instructions) or **declines** with a reason. The system works out the total and splits it 50/50.
+3. **Admin** reviews the quote on the **Restock Requests** page and **accepts** it (or **rejects** it, which cancels the request).
+4. **Deposit (50%)** — the admin pays outside the system using the manufacturer's instructions, then records the payment (method + reference number). The manufacturer checks their account and **confirms** it. Shipping is only possible after this.
+5. The manufacturer marks the order **shipped**; the admin dashboard shows it under **Incoming Shipments**.
+6. When the shipment physically arrives, the admin clicks **Confirm Received** — stock updates automatically and the restock is logged in `restock_history`, linked back to the original request. The remaining **balance (50%)** is now due.
+7. **Balance (50%)** — the admin records the payment, the manufacturer confirms it, and the request is **completed**.
+
+Payments are tracked and confirmed manually (there is no payment gateway); each one is stored in `restock_payments`.
 
 ## 🔑 Default Credentials
 
@@ -283,6 +289,7 @@ Make sure the backend is running on `localhost:8000` before starting `npm run de
 - [x] Dashboard "Incoming Shipments" card + Restock Requests history page
 - [x] Separate `manufacturer-portal/` app (login, pending requests, history)
 - [x] End-to-end verified against a live database
+- [x] Quote + 50% deposit / 50% balance payment tracking (`restock_payments`), confirmed by the manufacturer
 
 ## 🌿 Git Workflow Guide
 

@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Literal
 
+from app.schemas.restock_payment import RestockPaymentResponse
+
 
 class RestockRequestCreate(BaseModel):
     variant_id: int
@@ -9,8 +11,14 @@ class RestockRequestCreate(BaseModel):
 
 
 class RestockRequestRespond(BaseModel):
-    action: Literal["ship", "decline"]
+    action: Literal["quote", "decline"]
     quantity: Optional[int] = None
+    unit_price: Optional[float] = None
+    payment_instructions: Optional[str] = None
+    note: Optional[str] = None
+
+
+class RestockRequestShip(BaseModel):
     note: Optional[str] = None
 
 
@@ -20,6 +28,9 @@ class RestockRequestResponse(BaseModel):
     product_name: str
     size: str
     color: str
+    quantity_in_stock: int
+    stock_threshold: int
+    max_stock: int
     requested_by: int
     requested_by_username: str
     requested_quantity: int
@@ -28,6 +39,12 @@ class RestockRequestResponse(BaseModel):
     manufacturer_username: Optional[str] = None
     response_quantity: Optional[int] = None
     response_note: Optional[str] = None
+    unit_price: Optional[float] = None
+    total_amount: Optional[float] = None
+    deposit_amount: Optional[float] = None
+    balance_amount: Optional[float] = None
+    payment_instructions: Optional[str] = None
+    payments: list[RestockPaymentResponse] = []
     requested_at: datetime
     responded_at: Optional[datetime] = None
     received_by: Optional[int] = None

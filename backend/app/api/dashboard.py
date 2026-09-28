@@ -39,7 +39,9 @@ async def admin_dashboard(
     low_stock = await db.execute(select(ProductVariant)
                                  .where(ProductVariant.quantity_in_stock <= ProductVariant.stock_threshold))
     stock = low_stock.scalars().all()
-    total_low_stock = len(stock)
+    # Out of stock (0 units) is counted separately from low stock (1+ units at/below threshold)
+    total_out_of_stock = sum(1 for v in stock if v.quantity_in_stock == 0)
+    total_low_stock = len(stock) - total_out_of_stock
     
     # daily sales
     start_date = (datetime.now(timezone.utc) - timedelta(days=1)).replace(tzinfo=None)
@@ -150,7 +152,8 @@ async def admin_dashboard(
             "total_products": total_product,
             "total_variants": total_variants,
             "inactive_products": total_inactive,
-            "low_stock_count": total_low_stock
+            "low_stock_count": total_low_stock,
+            "out_of_stock_count": total_out_of_stock
         },
         "sales_today": {
             "total_sales": todays_sale,

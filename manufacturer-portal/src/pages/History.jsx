@@ -1,20 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { STATUS_META, formatDate, formatMoney, amountPaid } from '../utils/restock';
 
 const API_BASE = 'http://localhost:8000';
-
-const STATUS_STYLES = {
-  pending: 'bg-neutral-600 text-neutral-100',
-  shipped: 'bg-blue-900/60 text-blue-300',
-  declined: 'bg-red-900/60 text-red-300',
-  received: 'bg-green-900/60 text-green-300',
-};
-
-function formatDate(value) {
-  if (!value) return '—';
-  return new Date(value).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
-}
 
 export default function History() {
   const [requests, setRequests] = useState([]);
@@ -57,8 +46,9 @@ export default function History() {
                 <tr className="bg-neutral-800 text-neutral-300 text-left">
                   <th className="px-4 py-3 font-bold">Variant</th>
                   <th className="px-4 py-3 font-bold text-center">Requested</th>
-                  <th className="px-4 py-3 font-bold text-center">Shipped</th>
+                  <th className="px-4 py-3 font-bold text-center">Quoted</th>
                   <th className="px-4 py-3 font-bold">Status</th>
+                  <th className="px-4 py-3 font-bold">Total</th>
                   <th className="px-4 py-3 font-bold">Requested At</th>
                   <th className="px-4 py-3 font-bold">Responded At</th>
                 </tr>
@@ -73,9 +63,17 @@ export default function History() {
                     <td className="px-4 py-3 text-center text-neutral-300">{r.requested_quantity}</td>
                     <td className="px-4 py-3 text-center text-neutral-300">{r.response_quantity ?? '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${STATUS_STYLES[r.status] || 'bg-neutral-700 text-neutral-300'}`}>
-                        {r.status}
+                      <span className={`inline-block text-[10px] font-black uppercase px-2.5 py-1 rounded-full whitespace-nowrap ${(STATUS_META[r.status] || {}).style || 'bg-neutral-700 text-neutral-300'}`}>
+                        {(STATUS_META[r.status] || {}).label || r.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {r.total_amount !== null ? (
+                        <>
+                          <p className="text-neutral-200 font-bold">{formatMoney(r.total_amount)}</p>
+                          <p className="text-neutral-500">Paid {formatMoney(amountPaid(r))}</p>
+                        </>
+                      ) : '—'}
                     </td>
                     <td className="px-4 py-3 text-neutral-500">{formatDate(r.requested_at)}</td>
                     <td className="px-4 py-3 text-neutral-500">{formatDate(r.responded_at)}</td>
@@ -84,7 +82,7 @@ export default function History() {
 
                 {requests.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="text-center text-neutral-500 py-10 font-bold">
+                    <td colSpan={7} className="text-center text-neutral-500 py-10 font-bold">
                       No restock requests yet.
                     </td>
                   </tr>
