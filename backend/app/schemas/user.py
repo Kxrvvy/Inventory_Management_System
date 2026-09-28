@@ -22,6 +22,23 @@ class UserUpdate(BaseModel):
     status: Optional[str] = None
     role: str = None
 
+class ManufacturerInfoResponse(BaseModel):
+    """Contact details of the external manufacturer (no password). Only `nickname` is admin-editable."""
+    user_id: int
+    username: str
+    name: Optional[str] = None
+    nickname: Optional[str] = None
+    email: EmailStr
+    phone: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ManufacturerNicknameUpdate(BaseModel):
+    nickname: Optional[str] = None
+
+
 class UserResponse(BaseModel):
     message: Optional[str] = None
     user_id: int

@@ -6,6 +6,9 @@ export default function Staff() {
   const [staffList, setStaffList] = useState([]);
   const [modals, setModals] = useState({ add: false, delete: false });
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [manufacturers, setManufacturers] = useState([]);
+  const [nicknameEdit, setNicknameEdit] = useState(null); // { userId, value } while editing
+  const [nicknameError, setNicknameError] = useState('');
 
   const getInitials = (name) => {
     if (!name) return "";
@@ -27,7 +30,45 @@ export default function Staff() {
     } catch (err) { console.error("Fetch error:", err); }
   };
 
-  useEffect(() => { fetchStaff(); }, []);
+  // The manufacturer is a separate company: its details are view-only here. The one exception is a nickname,
+  // so admins can tell it apart at a glance.
+  const fetchManufacturers = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/users/manufacturer', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setManufacturers(Array.isArray(data) ? data : []);
+      }
+    } catch (err) { console.error("Fetch error:", err); }
+  };
+
+  const saveNickname = async () => {
+    setNicknameError('');
+    try {
+      const response = await fetch(`http://localhost:8000/users/manufacturer/${nicknameEdit.userId}/nickname`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ nickname: nicknameEdit.value })
+      });
+      if (response.ok) {
+        setNicknameEdit(null);
+        fetchManufacturers();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setNicknameError(data.detail || 'Could not save nickname.');
+      }
+    } catch (err) {
+      console.error("Save nickname error:", err);
+      setNicknameError('Could not save nickname.');
+    }
+  };
+
+  useEffect(() => { fetchStaff(); fetchManufacturers(); }, []);
 
   const handleDelete = async () => {
     const response = await fetch(`http://localhost:8000/users/${selectedStaff.user_id}`, {
@@ -90,7 +131,79 @@ export default function Staff() {
         ))}
       </div>
 
-      <AddEmployeeModal 
+      {manufacturers.length > 0 && (
+        <>
+          <div className="flex items-center gap-4 my-10">
+            <div className="flex-1 border-t border-neutral-300" />
+            <div className="text-center">
+              <h2 className="text-sm font-black tracking-wide text-neutral-700">MANUFACTURER</h2>
+              <p className="text-[10px] font-bold text-neutral-500">External company · only the nickname can be edited</p>
+            </div>
+            <div className="flex-1 border-t border-neutral-300" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {manufacturers.map((m) => (
+              <div key={m.user_id} className="bg-neutral-100 p-6 rounded-xl border border-dashed border-neutral-300 shadow-sm">
+                <div className="w-12 h-12 bg-neutral-500 rounded-full flex items-center justify-center text-white font-black text-l mb-4">
+                  {getInitials(m.nickname || m.name || m.username)}
+                </div>
+
+                <div className="flex items-center justify-between mb-0.5">
+                  {nicknameEdit?.userId === m.user_id ? (
+                    <input
+                      autoFocus
+                      maxLength={50}
+                      value={nicknameEdit.value}
+                      onChange={(e) => setNicknameEdit({ ...nicknameEdit, value: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveNickname();
+                        if (e.key === 'Escape') { setNicknameEdit(null); setNicknameError(''); }
+                      }}
+                      placeholder="Nickname"
+                      className="bg-white border border-neutral-300 rounded-lg px-2 py-1 text-sm font-black w-full mr-2"
+                    />
+                  ) : (
+                    <h3 className="font-black text-sm text-neutral-900">{m.nickname || m.name || m.username}</h3>
+                  )}
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full uppercase bg-amber-100 text-amber-700">
+                    manufacturer
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-neutral-500 mb-2">
+                  {m.nickname ? `${m.name || m.username} · ` : ''}{m.username}
+                </p>
+
+                <div className="mb-4 text-[10px] font-black">
+                  {nicknameEdit?.userId === m.user_id ? (
+                    <div className="flex gap-3">
+                      <button onClick={saveNickname} className="text-neutral-900 hover:underline">SAVE</button>
+                      <button onClick={() => { setNicknameEdit(null); setNicknameError(''); }} className="text-neutral-500 hover:underline">CANCEL</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setNicknameEdit({ userId: m.user_id, value: m.nickname || '' }); setNicknameError(''); }}
+                      className="text-neutral-500 hover:text-neutral-900 hover:underline"
+                    >
+                      ✏️ {m.nickname ? 'EDIT NICKNAME' : 'ADD NICKNAME'}
+                    </button>
+                  )}
+                  {nicknameEdit?.userId === m.user_id && nicknameError && (
+                    <p className="text-red-600 mt-1">{nicknameError}</p>
+                  )}
+                </div>
+
+                <div className="bg-neutral-500 text-white p-4 rounded-2xl text-[10px]">
+                  <div className="flex items-center gap-2 mb-1 truncate font-bold"><span>✉️</span> {m.email}</div>
+                  <div className="flex items-center gap-2 font-bold"><span>📞</span> {m.phone || '—'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <AddEmployeeModal
         isOpen={modals.add} 
         onClose={() => { setModals(prev => ({...prev, add: false})); setSelectedStaff(null); }} 
         onAdd={fetchStaff}
